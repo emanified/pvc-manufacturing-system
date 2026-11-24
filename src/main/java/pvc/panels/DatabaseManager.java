@@ -8,70 +8,201 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
+import java.awt.GraphicsEnvironment;
 import javax.swing.JOptionPane;
 
 public class DatabaseManager {
 
+    /** Shows a dialog, or prints to the console when no display is available (e.g. tests, servers). */
+    private static void showInfo(String message, String title, int type) {
+        if (GraphicsEnvironment.isHeadless()) {
+            System.out.println("[" + title + "] " + message);
+        } else {
+            JOptionPane.showMessageDialog(null, message, title,
+                    "Error".equals(title) ? JOptionPane.ERROR_MESSAGE : JOptionPane.INFORMATION_MESSAGE);
+        }
+    }
+
     public static void initializeDatabase() {
         String[] createTables = {
-            "CREATE TABLE IF NOT EXISTS issues (" +
-    "issue_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-    "worker_id INTEGER NOT NULL, " +
-    "severity TEXT NOT NULL CHECK(severity IN ('Low', 'Medium', 'High', 'Critical')), " +
-    "description TEXT NOT NULL, " +
-    "resolved BOOLEAN DEFAULT 0, " +
-    "logged_at TEXT DEFAULT CURRENT_TIMESTAMP, " +  // Using TEXT for SQLite compatibility
-    "FOREIGN KEY (worker_id) REFERENCES workers(worker_id) ON DELETE CASCADE)",
-            // Workers table
-            "CREATE TABLE IF NOT EXISTS workers (" +
-            "worker_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "name TEXT NOT NULL, " +
-            "role TEXT NOT NULL)",
-
-            // Production table
-            "CREATE TABLE IF NOT EXISTS production (" +
-            "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "worker_id INTEGER NOT NULL, " +
-            "shift TEXT NOT NULL, " +
-            "pvc_type TEXT NOT NULL, " +
-            "quantity REAL NOT NULL, " +
-            "quality INTEGER NOT NULL, " +
-            "date TEXT DEFAULT CURRENT_TIMESTAMP, " +
-            "FOREIGN KEY(worker_id) REFERENCES workers(worker_id) ON DELETE CASCADE)",
-
-            // Agreements table
-            "CREATE TABLE IF NOT EXISTS agreements (" +
-            "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "pvc_type TEXT NOT NULL UNIQUE, " +
-            "pricing REAL NOT NULL, " +
-            "wastage_allowance REAL NOT NULL, " +
-            "delivery_schedule TEXT NOT NULL, " +
-            "payment_terms TEXT NOT NULL)",
-
-            // Deliveries table
-            "CREATE TABLE IF NOT EXISTS deliveries (" +
-            "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "pellets_type TEXT NOT NULL, " +
-            "quantity_received REAL NOT NULL, " +
-            "delivery_date TEXT NOT NULL)",
-
-            // Overtime requests table
-            "CREATE TABLE IF NOT EXISTS overtime_requests (" +
-            "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "worker_id INTEGER NOT NULL, " +
-            "hours_requested INTEGER NOT NULL, " +
-            "status TEXT DEFAULT 'Pending', " +
-            "request_date TEXT DEFAULT CURRENT_TIMESTAMP, " +
-            "FOREIGN KEY(worker_id) REFERENCES workers(worker_id) ON DELETE CASCADE)",
-
-            // Users table (for login)
-            "CREATE TABLE IF NOT EXISTS users (" +
-            "user_id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-            "username TEXT NOT NULL UNIQUE, " +
-            "password TEXT NOT NULL, " +
-            "role TEXT NOT NULL, " +
-            "created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
-
+            """
+            CREATE TABLE IF NOT EXISTS workers (
+                worker_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                role TEXT NOT NULL,
+                image BLOB
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                user_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL UNIQUE,
+                password TEXT NOT NULL,
+                role TEXT NOT NULL,
+                name TEXT,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS issues (
+                issue_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                worker_id INTEGER NOT NULL,
+                severity TEXT NOT NULL CHECK(severity IN ('Low', 'Medium', 'High', 'Critical')),
+                description TEXT NOT NULL,
+                resolved BOOLEAN DEFAULT 0,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (worker_id) REFERENCES workers(worker_id) ON DELETE CASCADE
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS production (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                worker_id INTEGER NOT NULL,
+                shift TEXT NOT NULL,
+                pvc_type TEXT NOT NULL,
+                quantity_kg REAL,
+                quality_rating INTEGER,
+                production_date TEXT,
+                FOREIGN KEY(worker_id) REFERENCES workers(worker_id) ON DELETE CASCADE
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS agreements (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pvc_type TEXT NOT NULL UNIQUE,
+                pricing REAL NOT NULL,
+                wastage_allowance REAL NOT NULL,
+                delivery_schedule TEXT NOT NULL,
+                payment_terms TEXT NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS deliveries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pellets_type TEXT NOT NULL,
+                quantity_received REAL NOT NULL,
+                status TEXT CHECK(status IN ('Delivered', 'Pending')) NOT NULL,
+                scheduled_date TEXT,
+                delivery_date TEXT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS overtime_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                worker_id INTEGER NOT NULL,
+                hours_requested INTEGER NOT NULL,
+                status TEXT DEFAULT 'Pending',
+                request_date TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(worker_id) REFERENCES workers(worker_id) ON DELETE CASCADE
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS emergency_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                message TEXT NOT NULL,
+                timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS employees (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                designation TEXT NOT NULL,
+                department TEXT,
+                join_date TEXT
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS inventory (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pellets_type TEXT NOT NULL,
+                quantity REAL NOT NULL,
+                last_updated TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS labor_costs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                worker_id INTEGER NOT NULL,
+                role TEXT NOT NULL,
+                hours_worked REAL NOT NULL,
+                rate_per_hour REAL NOT NULL,
+                total_cost REAL NOT NULL,
+                generated_on TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS login_history (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                login_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                ip_address TEXT,
+                device_info TEXT,
+                success BOOLEAN,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                token TEXT NOT NULL,
+                expires_at TIMESTAMP NOT NULL,
+                used BOOLEAN DEFAULT 0,
+                FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS pellets_received (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                pellets_type TEXT,
+                amount REAL,
+                received_on TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS produce_collected (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                worker_id INTEGER,
+                shift TEXT,
+                quantity_collected REAL,
+                collection_time TEXT DEFAULT CURRENT_TIMESTAMP
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS shift_reports (
+                report_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                report_date TIMESTAMP NOT NULL,
+                report_content TEXT NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS supplier_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                supplier_name TEXT NOT NULL,
+                request_details TEXT NOT NULL,
+                status TEXT DEFAULT 'Pending'
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS suppliers (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                contact TEXT NOT NULL
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS supervisor_issues (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                worker_id INTEGER NOT NULL,
+                severity TEXT NOT NULL,
+                description TEXT NOT NULL,
+                logged_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY(worker_id) REFERENCES workers(worker_id) ON DELETE CASCADE
+            )""",
+            "CREATE INDEX IF NOT EXISTS idx_issues_resolved ON issues(resolved)",
+            "CREATE INDEX IF NOT EXISTS idx_issues_timestamp ON issues(timestamp)",
+            "CREATE INDEX IF NOT EXISTS idx_issues_worker ON issues(worker_id)"
         };
 
         Connection conn = null;
@@ -92,18 +223,18 @@ public class DatabaseManager {
                 createDefaultAdmin(conn);
                 
                 conn.commit(); // Commit transaction
-                JOptionPane.showMessageDialog(null, 
+                showInfo( 
                     "Database initialized successfully", 
                     "Success", 
-                    JOptionPane.INFORMATION_MESSAGE);
+                    0);
             } catch (SQLException e) {
                 if (conn != null) {
                     conn.rollback(); // Rollback on error
                 }
-                JOptionPane.showMessageDialog(null, 
+                showInfo( 
                     "Database initialization failed: " + e.getMessage(), 
                     "Error", 
-                    JOptionPane.ERROR_MESSAGE);
+                    0);
                 throw new RuntimeException("Database initialization failed", e);
             } finally {
                 if (conn != null) {
@@ -111,10 +242,10 @@ public class DatabaseManager {
                 }
             }
         } catch (SQLException e) {
-            JOptionPane.showMessageDialog(null, 
+            showInfo( 
                 "Database connection failed: " + e.getMessage(), 
                 "Error", 
-                JOptionPane.ERROR_MESSAGE);
+                0);
             throw new RuntimeException("Database connection failed", e);
         } finally {
             if (conn != null) {
@@ -181,8 +312,8 @@ private static String hashPassword(String password) {
 
     public static String getProductionReport() {
         StringBuilder report = new StringBuilder();
-        String sql = "SELECT p.id, w.name, w.role, p.shift, p.pvc_type, p.quantity, p.quality, p.date " +
-                     "FROM production p JOIN workers w ON p.worker_id = w.worker_id ORDER BY p.date DESC";
+        String sql = "SELECT p.id, w.name, w.role, p.shift, p.pvc_type, p.quantity_kg AS quantity, p.quality_rating AS quality, p.production_date AS date " +
+                     "FROM production p JOIN workers w ON p.worker_id = w.worker_id ORDER BY p.production_date DESC";
         try (Connection conn = DatabaseConnector.connect();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
@@ -234,7 +365,7 @@ public static ResultSet getUnresolvedIssues() throws SQLException {
     return stmt.executeQuery(
         "SELECT i.*, w.name FROM issues i " +
         "JOIN workers w ON i.worker_id = w.worker_id " +
-        "WHERE resolved = 0 ORDER BY logged_at DESC");
+        "WHERE i.resolved = 0 ORDER BY i.timestamp DESC");
 }
 
 // Mark issue as resolved
@@ -286,7 +417,7 @@ public static boolean resolveIssue(int issueId) {
 
     //save delivery method
     public static boolean saveDelivery(String pelletsType, double quantity, String deliveryDate) {
-    String sql = "INSERT INTO deliveries (pellets_type, quantity_received, delivery_date) VALUES (?, ?, ?)";
+    String sql = "INSERT INTO deliveries (pellets_type, quantity_received, status, delivery_date) VALUES (?, ?, 'Delivered', ?)";
     try (Connection conn = DatabaseConnector.connect();
          PreparedStatement pstmt = conn.prepareStatement(sql)) {
         conn.setAutoCommit(false);
@@ -431,8 +562,8 @@ public static boolean addOrUpdateAgreement(String pvcType, double pricing, doubl
     // Production Management
     public static boolean addProductionRecord(int workerId, String shift, String pvcType, 
                                            double quantity, int quality) {
-        String sql = "INSERT INTO production(worker_id, shift, pvc_type, quantity, quality) " +
-                     "VALUES (?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO production(worker_id, shift, pvc_type, quantity_kg, quality_rating, production_date) " +
+                     "VALUES (?, ?, ?, ?, ?, datetime('now'))";
         try (Connection conn = DatabaseConnector.connect();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, workerId);
@@ -496,9 +627,9 @@ public static boolean addOrUpdateAgreement(String pvcType, double pricing, doubl
         Statement stmt = conn.createStatement();
         return stmt.executeQuery(
             "SELECT w.worker_id, w.name, p.pvc_type as task, " +
-            "SUM(p.quantity) as output, AVG(p.quality) as quality_score " +
+            "SUM(p.quantity_kg) as output, AVG(p.quality_rating) as quality_score " +
             "FROM workers w LEFT JOIN production p ON w.worker_id = p.worker_id " +
-            "WHERE p.date >= datetime('now', '-8 hours') " +
+            "WHERE p.production_date >= datetime('now', '-8 hours') " +
             "GROUP BY w.worker_id");
     }
 
@@ -579,5 +710,9 @@ public static boolean userExists(String username) {
 
     // Utility Methods
     private static void showError(String msg) {
-        JOptionPane.showMessageDialog(null, msg, "Database Error", JOptionPane.ERROR_MESSAGE);
+        if (GraphicsEnvironment.isHeadless()) {
+            System.err.println("[Database Error] " + msg);
+        } else {
+            JOptionPane.showMessageDialog(null, msg, "Database Error", JOptionPane.ERROR_MESSAGE);
+        }
     }}

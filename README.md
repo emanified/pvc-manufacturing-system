@@ -26,7 +26,7 @@ plus a login page and a signup dialog.
 - Supervisors log issues and monitor shift output
 - Managers can approve or reject overtime requests (the pending-approvals list is a fixed sample entry, see limitations)
 - Generate production, inventory, supplier and labor-cost reports; manual salary calculator
-- SQLite database is created automatically on first run (tables in `DatabaseManager.java`)
+- SQLite database and all tables are created automatically on first run (schema in `DatabaseManager.java`, foreign keys enforced, cascading deletes)
 
 ## Run
 Requires JDK 17+ and Maven.
@@ -43,8 +43,12 @@ This was written early in my studies and I have not maintained it. Known issues:
 - **Hard-coded values:** the Manager dashboard KPIs (daily production, defect rate, labor cost) are fixed placeholder values, not computed from the database.
   The Manager "pending approvals" entry is a fixed sample item, and new worker IDs are generated randomly rather than from a database sequence.
 - **Weak security:** passwords are hashed with plain, unsalted SHA-256, and a default admin account with a known password is created on first run. Do not use this approach in a real system.
-- **Incomplete / unreliable features:** some features are partly implemented or have functional bugs, and error handling is minimal.
+- **Incomplete features:** nothing in the app creates overtime requests, so the Manager "Approve / Reject" action has no real data to act on. Employee, inventory and some report tables exist in the schema but are only partly used. Error handling is minimal.
 - **Outdated:** older dependency versions (FlatLaf 3.4, sqlite-jdbc 3.43) and a Swing UI; no automated tests.
 - **Configuration:** the database path depends on the working directory, and there are no migrations or environment-based settings.
 
 If I rebuilt it today I would move to a proper service layer, salted password hashing (bcrypt), computed dashboards and tests.
+
+## Testing
+The database layer was checked end to end against a fresh database (login, workers, production, deliveries, agreements, issues, reports),
+and every screen was constructed and its report buttons clicked without errors. There is no automated test suite in the repo yet.

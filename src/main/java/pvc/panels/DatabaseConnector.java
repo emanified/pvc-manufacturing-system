@@ -5,7 +5,7 @@ import java.sql.SQLException;
 
 public class DatabaseConnector {
     
-    private static final String DB_URL = "jdbc:sqlite:" + System.getProperty("user.dir") + "/pvc_project_full.db";
+    private static final String DB_URL = "jdbc:sqlite:" + System.getProperty("user.dir") + "/pvc_project_full.db?foreign_keys=on";
     private static final String USER = "username";
     private static final String PASS = "password";
     public static Connection connect() {
