@@ -2,7 +2,7 @@
 
 A desktop application (Java Swing + SQLite) for managing a PVC manufacturing plant: agreements with suppliers,
 pellet deliveries, worker production input, supervisor monitoring, manager approvals and salary / labor-cost reports.
-Built as a Software Engineering Project (SEP) in my 3rd semester.
+Built by a team of four as the group project for the *Introduction to Software Engineering Principles* course (3rd semester).
 
 > **Status: early coursework project.** It demonstrates GUI design, role-based screens and SQLite persistence,
 > but it is not production-ready. See [Known limitations](#known-limitations) below.
@@ -18,6 +18,18 @@ plus a login page and a signup dialog.
 | ![Agreement](docs/screenshots/agreement.png) | ![Manager](docs/screenshots/manager.png) |
 | ![Supplier](docs/screenshots/supplier.png) | ![Supervisor](docs/screenshots/supervisor.png) |
 | ![Worker](docs/screenshots/worker.png) | ![Reports](docs/screenshots/reports.png) |
+
+## Design documentation
+The team produced analysis and design documents for the course (requirements, use cases, class and database diagrams, a swimlane process flow).
+The diagrams below are included here.
+
+**Domain model (class diagram)** - suppliers, agreements, pellet deliveries, workers, production and salary
+
+![Domain model](docs/diagrams/domain-model.png)
+
+**Process flow (swimlane)** - from supplier agreement through extrusion to warehouse delivery
+
+![Process flow](docs/diagrams/process-flow.jpg)
 
 ## What it does
 - Login / signup with role-based accounts
