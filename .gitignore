@@ -1,0 +1,14 @@
+# build output
+target/
+*.class
+
+# local database (created on first run)
+*.db
+*.sqbpro
+
+# logs and IDE
+*.log
+hs_err_pid*
+replay_pid*
+.vscode/
+.idea/
